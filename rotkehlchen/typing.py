@@ -127,6 +127,9 @@ ChecksumEthAddress = ChecksumAddress
 T_BTCAddress = str
 BTCAddress = NewType('BTCAddress', T_BTCAddress)
 
+T_MoneroAddress = str
+MoneroAddress = NewType('MoneroAddress', T_MoneroAddress)
+
 T_Eth2PubKey = str
 Eth2PubKey = NewType('Eth2PubKey', T_Eth2PubKey)
 
@@ -136,6 +139,7 @@ BlockchainAddress = Union[
     ChecksumEthAddress,
     KusamaAddress,
     PolkadotAddress,
+    MoneroAddress,
     str,
 ]
 ListOfBlockchainAddresses = Union[
@@ -143,6 +147,7 @@ ListOfBlockchainAddresses = Union[
     List[ChecksumEthAddress],
     List[KusamaAddress],
     List[PolkadotAddress],
+    List[MoneroAddress],
 ]
 
 
@@ -263,6 +268,7 @@ class SupportedBlockchain(Enum):
     KUSAMA = 'KSM'
     AVALANCHE = 'AVAX'
     POLKADOT = 'DOT'
+    MONERO = 'XMR'
 
     def get_address_type(self) -> Callable:
         if self in (SupportedBlockchain.ETHEREUM, SupportedBlockchain.AVALANCHE):
@@ -275,6 +281,8 @@ class SupportedBlockchain(Enum):
             return KusamaAddress
         if self == SupportedBlockchain.POLKADOT:
             return PolkadotAddress
+        if self == SupportedBlockchain.MONERO:
+            return MoneroAddress
         raise AssertionError(f'Invalid SupportedBlockchain value: {self}')
 
     def ens_coin_type(self) -> int:

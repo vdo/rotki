@@ -91,6 +91,7 @@ from rotkehlchen.premium.premium import Premium
 from rotkehlchen.typing import (
     BTCAddress,
     ChecksumEthAddress,
+    MoneroAddress,
     Eth2PubKey,
     ListOfBlockchainAddresses,
     ModuleName,
@@ -183,6 +184,7 @@ class BlockchainBalances:
     ksm: Dict[KusamaAddress, BalanceSheet] = field(init=False)
     dot: Dict[PolkadotAddress, BalanceSheet] = field(init=False)
     avax: DefaultDict[ChecksumEthAddress, BalanceSheet] = field(init=False)
+    xmr: Dict[MoneroAddress, Balance] = field(init=False)
 
     def copy(self) -> 'BlockchainBalances':
         balances = BlockchainBalances(db=self.db)
@@ -192,6 +194,7 @@ class BlockchainBalances:
         balances.ksm = self.ksm.copy()
         balances.dot = self.dot.copy()
         balances.avax = self.avax.copy()
+        balances.xmr = self.xmr.copy()
         return balances
 
     def __post_init__(self) -> None:
@@ -201,6 +204,7 @@ class BlockchainBalances:
         self.ksm = defaultdict(BalanceSheet)
         self.dot = defaultdict(BalanceSheet)
         self.avax = defaultdict(BalanceSheet)
+        self.xmr = defaultdict(BalanceSheet)
 
     def serialize(self) -> Dict[str, Dict]:
         eth_balances = {k: v.serialize() for k, v in self.eth.items()}
@@ -209,6 +213,7 @@ class BlockchainBalances:
         ksm_balances = {k: v.serialize() for k, v in self.ksm.items()}
         dot_balances = {k: v.serialize() for k, v in self.dot.items()}
         avax_balances = {k: v.serialize() for k, v in self.avax.items()}
+        xmr_balances = {k: v.serialize() for k, v in self.xmr.items()}
 
         xpub_mappings = self.db.get_addresses_to_xpub_mapping(list(self.btc.keys()))
         for btc_account, balances in self.btc.items():
@@ -256,6 +261,8 @@ class BlockchainBalances:
             blockchain_balances['DOT'] = dot_balances
         if avax_balances != {}:
             blockchain_balances['AVAX'] = avax_balances
+        if xmr_balances != {}:
+            blockchain_balances['XMR'] = xmr_balances
 
         return blockchain_balances
 
@@ -272,7 +279,8 @@ class BlockchainBalances:
             return self.dot != {}
         if blockchain == SupportedBlockchain.AVALANCHE:
             return self.avax != {}
-
+        if blockchain == SupportedBlockchain.MONERO:
+            return self.xmr != {}
         # else
         raise AssertionError('Invalid blockchain value')
 
@@ -285,6 +293,7 @@ class BlockchainBalances:
                 KusamaAddress,
                 PolkadotAddress,
                 Eth2PubKey,
+                MoneroAddress,
             ],
     ) -> bool:
         if blockchain == SupportedBlockchain.ETHEREUM:
@@ -299,6 +308,8 @@ class BlockchainBalances:
             return account in self.dot
         if blockchain == SupportedBlockchain.AVALANCHE:
             return account in self.avax
+        if blockchain == SupportedBlockchain.MONERO:
+            return account in self.xmr
         # else
         raise AssertionError('Invalid blockchain value')
 
@@ -356,6 +367,7 @@ class ChainManager(CacheableMixIn, LockableQueryMixIn):
         self.ksm_lock = Semaphore()
         self.dot_lock = Semaphore()
         self.avax_lock = Semaphore()
+        self.xmr_lock = Semaphore()
 
         # Per account balances
         self.balances = BlockchainBalances(db=database)
@@ -731,6 +743,33 @@ class ChainManager(CacheableMixIn, LockableQueryMixIn):
             )
             total_balance += balance
         self.totals.assets[A_DOT] = total_balance
+
+    @protect_with_lock()
+    @cache_response_timewise()
+    def query_xmr_balances(
+            self,  # pylint: disable=unused-argument
+            # Kwargs here is so linters don't complain when the "magic" ignore_cache kwarg is given
+            **kwargs: Any,
+    ) -> None:
+        """Queries Monero RPC for the balance of XMR wallet
+
+        May raise:
+        - RemotError if there is a problem querying any remote
+        """
+        if len(self.accounts.xmr) == 0:
+            return
+
+        self.balances.xmr = {}
+        xmr_usd_price = Inquirer().find_usd_price(A_XMR)
+        total = FVal(0)
+        balances = get_monero_addresses_balances(self.accounts.xmr)
+        for account, balance in balances.items():
+            total += balance
+            self.balances.xmr[account] = Balance(
+                amount=balance,
+                usd_value=balance * xmr_usd_price,
+            )
+        self.totals.assets[A_XMR] = Balance(amount=total, usd_value=total * xmr_usd_price)
 
     def sync_btc_accounts_with_db(self) -> None:
         """Call this function after having deleted BTC accounts from the DB to
@@ -1231,6 +1270,9 @@ class ChainManager(CacheableMixIn, LockableQueryMixIn):
                         account=address,
                         append_or_remove=append_or_remove,
                     )
+
+        # Add MONERO
+
         else:
             # That should not happen. Should be checked by marshmallow
             raise AssertionError(

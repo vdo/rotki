@@ -155,7 +155,18 @@ A_BSQ = Asset.initialize(
     cryptocompare=None,
 )
 CONSTANT_ASSETS.append(A_BSQ)
-
+A_XMR = Asset.initialize(
+    identifier='XMR',
+    asset_type=AssetType.OWN_CHAIN,
+    name="Monero",
+    symbol='XMR',
+    started=Timestamp(1397818194),
+    forked=None,
+    swapped_for=None,
+    coingecko='monero',
+    cryptocompare=None,
+)
+CONSTANT_ASSETS.append(A_XMR)
 
 A_BAL = EthereumToken.initialize(
     address=string_to_ethereum_address('0xba100000625a3754423978a60c9317c58a424e3D'),

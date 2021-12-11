@@ -71,6 +71,7 @@ STRING_KEYS = (
     'eth_rpc_endpoint',
     'ksm_rpc_endpoint',
     'dot_rpc_endpoint',
+    'xmr_wallet_rpc_endpoint'
     'date_display_format',
     'frontend_settings',
 )
@@ -91,6 +92,7 @@ class DBSettings(NamedTuple):
     eth_rpc_endpoint: str = 'http://localhost:8545'
     ksm_rpc_endpoint: str = 'http://localhost:9933'
     dot_rpc_endpoint: str = ''  # same as kusama -- must be set by user
+    xmr_wallet_rpc_endpoint: str = 'http://localhost:18088'  # FIXME needs username:password
     main_currency: Asset = DEFAULT_MAIN_CURRENCY
     date_display_format: str = DEFAULT_DATE_DISPLAY_FORMAT
     last_balance_save: Timestamp = Timestamp(0)
@@ -120,6 +122,7 @@ class ModifiableDBSettings(NamedTuple):
     eth_rpc_endpoint: Optional[str] = None
     ksm_rpc_endpoint: Optional[str] = None
     dot_rpc_endpoint: Optional[str] = None
+    xmr_wallet_rpc_endpoint: Optional[str] = None
     main_currency: Optional[Asset] = None
     date_display_format: Optional[str] = None
     submit_usage_analytics: Optional[bool] = None

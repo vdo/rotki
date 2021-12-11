@@ -22,6 +22,7 @@ export class Defaults {
   static RPC_ENDPOINT = 'http://localhost:8545';
   static KSM_RPC_ENDPOINT = 'http://localhost:9933';
   static DOT_RPC_ENDPOINT = ''; // same as Kusama, must be set by user
+  static XMR_WALLET_RPC_ENDPOINT = 'http://localhost:18088';
   static BALANCE_SAVE_FREQUENCY = 24;
   static ANONYMOUS_USAGE_ANALYTICS = true;
   static DEFAULT_QUERY_PERIOD = 5;
